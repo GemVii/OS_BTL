@@ -9,6 +9,11 @@ int empty(struct queue_t * q) {
 
 void enqueue(struct queue_t * q, struct pcb_t * proc) {
         /* TODO: put a new process to queue [q] */
+        if (q == NULL || proc == NULL) 
+        {
+                return ;
+        }
+
         if(q->size < MAX_QUEUE_SIZE)
         {
                 q->proc[q->size] = proc;
@@ -22,17 +27,8 @@ struct pcb_t * dequeue(struct queue_t * q) {
          * */
         if(empty(q))    return NULL;
 
-        int highest_priority = 0;
-        for(int i = 1;i < q->size; i++)
-        {
-                if(q->proc[i]->priority > q->proc[highest_priority])
-                {
-                        highest_priority = i;
-                }
-        }
-
-        struct pcb_t *res = q->proc[highest_priority];
-        for(int i = highest_priority;i < q->size - 1;i++)
+        struct pcb_t *res = q->proc[0];
+        for(int i = 0;i < q->size - 1;i++)
         {
                 q->proc[i] = q->proc[i + 1];
         }
