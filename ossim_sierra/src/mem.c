@@ -48,6 +48,9 @@ static struct trans_table_t * get_trans_table(
 	int i;
 	for (i = 0; i < page_table->size; i++) {
 		// Enter your code here
+		if (page_table->table[i].v_index == index) {
+            return page_table->table[i].next_lv;
+        }
 	}
 	return NULL;
 
@@ -93,8 +96,19 @@ addr_t alloc_mem(uint32_t size, struct pcb_t * proc) {
 
 	uint32_t num_pages = (size % PAGE_SIZE) ? size / PAGE_SIZE :
 		size / PAGE_SIZE + 1; // Number of pages we will use
-	int mem_avail = 0; // We could allocate new memory region or not?
+	//int mem_avail = 0; // We could allocate new memory region or not?
 
+	uint32_t num_pages = (size % PAGE_SIZE) ? size / PAGE_SIZE + 1 : size / PAGE_SIZE;
+    
+    // Count available pages
+    int free_pages = 0;
+    for (int i = 0; i < NUM_PAGES; i++) {
+        if (_mem_stat[i].proc == 0) free_pages++;
+    }
+
+	// Check memory availability
+    int mem_avail = (free_pages >= num_pages) && 
+                    (proc->bp + num_pages * PAGE_SIZE < RAM_SIZE);
 	/* First we must check if the amount of free memory in
 	 * virtual address space and physical address space is
 	 * large enough to represent the amount of required 
@@ -107,6 +121,29 @@ addr_t alloc_mem(uint32_t size, struct pcb_t * proc) {
 	if (mem_avail) {
 		/* We could allocate new memory region to the process */
 		ret_mem = proc->bp;
+
+		// Allocate pages
+        int prev_page = -1;
+        int pages_allocated = 0;
+        
+        for (int i = 0; i < NUM_PAGES && pages_allocated < num_pages; i++) {
+            if (_mem_stat[i].proc == 0) {
+                _mem_stat[i].proc = proc->pid;
+                _mem_stat[i].index = pages_allocated;
+                
+                if (prev_page != -1) {
+                    _mem_stat[prev_page].next = i;
+                }
+                
+                prev_page = i;
+                pages_allocated++;
+            }
+        }
+        
+        if (prev_page != -1) {
+            _mem_stat[prev_page].next = -1;
+        }
+
 		proc->bp += num_pages * PAGE_SIZE;
 		/* Update status of physical pages which will be allocated
 		 * to [proc] in _mem_stat. Tasks to do:
