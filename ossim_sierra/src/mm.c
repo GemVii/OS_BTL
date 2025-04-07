@@ -91,16 +91,23 @@ int vmap_page_range(struct pcb_t *caller,           // process call
   int pgn = PAGING_PGN(addr);
 
   /* TODO: update the rg_end and rg_start of ret_rg 
-  //ret_rg->rg_end =  ....
-  //ret_rg->rg_start = ...
-  //ret_rg->vmaid = ...
+  // ret_rg->rg_end =  ....
+  // ret_rg->rg_start = ...
+  // ret_rg->vmaid = ...
   */
+  ret_rg->rg_start = addr;
+  ret_rg->rg_end = addr + pgnum * PAGING_PAGESZ;  
+  ret_rg->rg_next = NULL;
 
   /* TODO map range of frame to address space
    *      [addr to addr + pgnum*PAGING_PAGESZ
    *      in page table caller->mm->pgd[]
    */
-
+  for(pgit = 0; pgit < pgnum; pgit++)
+  {
+    pte_set_fpn(&caller->mm->pgd[pgn + pgit], frames->fpn);
+    frames = frames->fp_next;
+  }
   /* Tracking for later page replacement activities (if needed)
    * Enqueue new usage page */
   enlist_pgn_node(&caller->mm->fifo_pgn, pgn + pgit);
@@ -124,17 +131,34 @@ int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struc
   //caller-> ...
   //frm_lst-> ...
   */
-
   for (pgit = 0; pgit < req_pgnum; pgit++)
   {
   /* TODO: allocate the page 
    */
     if (MEMPHY_get_freefp(caller->mram, &fpn) == 0)
     {
+      newfp_str = malloc(sizeof(struct framephy_struct));
+      if(newfp_str == NULL)
+      {
+        return -1; // OOM
+      } 
       newfp_str->fpn = fpn;
+      newfp_str->fp_next = NULL;
+      if(frm_lst == NULL)
+      {
+        *frm_lst = newfp_str;
+      }
+      else
+      {
+        struct framephy_struct *fpit = *frm_lst;
+        while(fpit->fp_next != NULL)
+          fpit = fpit->fp_next;
+        fpit->fp_next = newfp_str;
+      }
     }
     else
     { // TODO: ERROR CODE of obtaining somes but not enough frames
+      return -3000; // OOM
     }
   }
 
@@ -227,14 +251,14 @@ int init_mm(struct mm_struct *mm, struct pcb_t *caller)
   enlist_vm_rg_node(&vma0->vm_freerg_list, first_rg);
 
   /* TODO update VMA0 next */
-  // vma0->next = ...
+  vma0->vm_next = NULL;
 
   /* Point vma owner backward */
   vma0->vm_mm = mm; 
 
   /* TODO: update mmap */
   //mm->mmap = ...
-
+  mm->mmap = vma0;
   return 0;
 }
 
