@@ -163,7 +163,18 @@ int MEMPHY_dump(struct memphy_struct *mp)
   /*TODO dump memphy contnt mp->storage
    *     for tracing the memory content
    */
-   return 0;
+  if (mp == NULL || mp->storage == NULL)
+        return -1;
+
+    printf("MEMPHY Dump: maxsz = %d\n", mp->maxsz);
+    // In ra nội dung bộ nhớ, 16 byte mỗi dòng
+    for (int i = 0; i < mp->maxsz; i++) {
+        if (i % 16 == 0)
+            printf("\n0x%04x: ", i);
+        printf("%02x ", mp->storage[i]);
+    }
+    printf("\n");
+    return 0;
 }
 
 int MEMPHY_put_freefp(struct memphy_struct *mp, int fpn)
