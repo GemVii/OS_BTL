@@ -105,12 +105,7 @@ addr_t alloc_mem(uint32_t size, struct pcb_t * proc) {
 	 * to know whether this page has been used by a process.
 	 * For virtual memory space, check bp (break pointer).
 	 * */
-	if(proc->bp + size < RAM_SIZE) {
-		mem_avail = 1;	
-	}
-	else {
-		mem_avail = 0;
-	}
+	
 	if (mem_avail) {
 		/* We could allocate new memory region to the process */
 		ret_mem = proc->bp;
@@ -121,16 +116,6 @@ addr_t alloc_mem(uint32_t size, struct pcb_t * proc) {
 		 * 	- Add entries to segment table page tables of [proc]
 		 * 	  to ensure accesses to allocated memory slot is
 		 * 	  valid. */
-		int i,page_index;
-		page_index = ret_mem >> OFFSET_LEN;
-		for(int i = 0;i < num_pages;i++){
-			_mem_stat[page_index + i].proc = proc->pid;
-			_mem_stat[page_index + i].index = i;
-			_mem_stat[page_index + i].next = -1;
-			if(i != num_pages - 1){
-				_mem_stat[page_index + i].next = page_index + 1;
-			}
-		}
 	}
 	pthread_mutex_unlock(&mem_lock);
 	return ret_mem;
