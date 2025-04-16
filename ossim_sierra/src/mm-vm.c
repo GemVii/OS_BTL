@@ -85,7 +85,8 @@
  {
    struct vm_area_struct *vma = caller->mm->mmap;
    if(vmaend < 0){
-     printf("[VALIDATE_OVERLAP] Error: NOT ENOUGH MEMORY,%d %d\n");
+       printf("[VALIDATE_OVERLAP] Error: NOT ENOUGH MEMORY start=0x%lx end=0x%lx\n",
+       vma->vm_start, vma->vm_end);
      return -1;
    }
    // #ifdef MM_PAGING_HEAP_GODOWN //No idea what the hell is this
@@ -98,14 +99,14 @@
    /* TODO validate the planned memory area is not overlapped */
    while(vma){
      if(vma == NULL || vma->vm_id != vmaid){
-       printf("[VALIDATE_OVERLAP] Error: Overlap detected with VMA %d\n", vma->vm_id);
-       return -1;/* Overlap */
+        printf("[VALIDATE_OVERLAP] Error: Overlap detected with VMA %lu\n", vma->vm_id);
+        return -1;/* Overlap */
      }
      
      if ((vmastart >= vma->vm_start && vmastart < vma->vm_end) ||
      (vmaend > vma->vm_start && vmaend <= vma->vm_end) ||     
      (vmastart <= vma->vm_start && vmaend >= vma->vm_end)) {
-       printf("[VALIDATE_OVERLAP] Error: Overlap detected with VMA %d\n", vma->vm_id);
+       printf("[VALIDATE_OVERLAP] Error: Overlap detected with VMA %lu\n", vma->vm_id);
        return -1; /* Overlap */
      }
      vma = vma->vm_next;
