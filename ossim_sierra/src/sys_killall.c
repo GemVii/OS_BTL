@@ -92,6 +92,11 @@
 #include "string.h"
 #include "libmem.h"
 
+/* Nếu MAX_PROC không được định nghĩa trong common.h, ta định nghĩa tạm ở đây */
+#ifndef MAX_PROC
+#define MAX_PROC 1024
+#endif
+
 extern struct pcb_t *procs[MAX_PROC];
 extern int num_processes;
 
@@ -102,26 +107,27 @@ int __sys_killall(struct pcb_t *caller, struct sc_regs* regs)
     uint32_t memrg = regs->a1;
     int i = 0;
 
-    /* Đọc chuỗi tên tiến trình từ vùng nhớ memrg */
+    /* Đọc tên tiến trình từ memory region memrg */
     while (i < 99) {
         if (libread(caller, memrg, i, &data) != 0) 
             break;
-        /* -1 hoặc 0 đánh dấu kết thúc chuỗi */
         if (data == (uint32_t)-1 || data == 0) 
             break;
         proc_name[i++] = (char)data;
     }
     proc_name[i] = '\0';
 
-    printf("[KILLALL] Retrieved name from region %u: \"%s\"\n", memrg, proc_name);
+    printf("[KILLALL] Retrieved name: \"%s\"\n", proc_name);
 
     int count = 0;
-    for (int j = 0; j < MAX_PROC; j++) {
+    /* Duyệt qua tất cả tiến trình */
+    for (int j = 0; j < num_processes; j++) {
         if (procs[j] == NULL) 
             continue;
         if (strcmp(procs[j]->path, proc_name) == 0) {
-            printf("[KILLALL] Terminating PID %u (%s)\n", procs[j]->pid, procs[j]->path);
-            procs[j]->status = PROCESS_TERMINATED;
+            printf("[KILLALL] Terminating PID %u\n", procs[j]->pid);
+            /* Mark "terminated" bằng cách đẩy pc ra ngoài cuối code */
+            procs[j]->pc = procs[j]->code->size;
             count++;
         }
     }
@@ -129,4 +135,5 @@ int __sys_killall(struct pcb_t *caller, struct sc_regs* regs)
     printf("[KILLALL] Total terminated: %d\n", count);
     return count;
 }
+
 
