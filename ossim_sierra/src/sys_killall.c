@@ -77,7 +77,7 @@ int __sys_killall(struct pcb_t *caller, struct sc_regs* regs)
         if (strcmp(procs[j]->path, proc_name) == 0) {
             printf("[KILLALL] Terminating PID %d (%s)\n", procs[j]->pid, procs[j]->path);
 
-            procs[j]->status = PROCESS_TERMINATED;  /
+            procs[j]->status = PROCESS_TERMINATED;  
             count++;
         }
     }
