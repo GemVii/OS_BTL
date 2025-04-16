@@ -6,6 +6,16 @@
 #include <stdint.h>
 #include <stdio.h>
 
+/* --- BẮT ĐẦU PHẦN MỚI --- */
+#ifndef MAX_PROC
+#define MAX_PROC 1024
+#endif
+
+#ifndef PROCESS_TERMINATED
+#define PROCESS_TERMINATED 2
+#endif
+/* ---  KẾT THÚC PHẦN MỚI --- */
+
 #ifndef OSCFG_H
 #include "os-cfg.h"
 #endif
