@@ -96,9 +96,10 @@
 #ifndef MAX_PROC
 #define MAX_PROC 1024
 #endif
-
-extern struct pcb_t *procs[MAX_PROC];
-extern int num_processes;
+struct pcb_t *procs[MAX_PROC];
+int num_processes = 0;
+// extern struct pcb_t *procs[MAX_PROC];
+// extern int num_processes;
 
 int __sys_killall(struct pcb_t *caller, struct sc_regs* regs)
 {
