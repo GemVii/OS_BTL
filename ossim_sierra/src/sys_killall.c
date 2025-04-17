@@ -145,7 +145,7 @@
 #include "libmem.h"
 
 /* Sử dụng mảng procs và num_processes được định nghĩa ở os.c */
-extern struct pcb_t *procs[MAX_PROC];
+extern struct pcb_t *procs[];
 extern int num_processes;
 
 int __sys_killall(struct pcb_t *caller, struct sc_regs *regs)
@@ -156,7 +156,7 @@ int __sys_killall(struct pcb_t *caller, struct sc_regs *regs)
     int i = 0;
 
     /* Đọc tên tiến trình từ vùng nhớ memrg */
-    while (i < 99) {
+    while (i < sizeof(proc_name)-1) {
         if (libread(caller, memrg, i, &data) != 0) 
             break;
         if (data == (uint32_t)-1 || data == 0) 
