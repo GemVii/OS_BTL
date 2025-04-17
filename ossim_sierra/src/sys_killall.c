@@ -144,18 +144,10 @@
 #include "string.h"
 #include "libmem.h"
 
-/* Nếu MAX_PROC chưa được định nghĩa trong common.h, định nghĩa tạm ở đây */
-#ifndef MAX_PROC
-#define MAX_PROC 1024
-#endif
+/* Sử dụng mảng procs và num_processes được định nghĩa ở os.c */
+extern struct pcb_t *procs[MAX_PROC];
+extern int num_processes;
 
-/* Bảng PCB toàn cục */
-struct pcb_t *procs[MAX_PROC];
-
-/*
- * Syscall killall: đọc tên tiến trình từ memory region,
- * sau đó dừng (terminate) mọi tiến trình cùng tên.
- */
 int __sys_killall(struct pcb_t *caller, struct sc_regs *regs)
 {
     char proc_name[100];
@@ -163,11 +155,11 @@ int __sys_killall(struct pcb_t *caller, struct sc_regs *regs)
     uint32_t memrg = regs->a1;
     int i = 0;
 
-    /* Đọc chuỗi kí tự tên tiến trình từ vùng nhớ memrg */
+    /* Đọc tên tiến trình từ vùng nhớ memrg */
     while (i < 99) {
-        if (libread(caller, memrg, i, &data) != 0)
+        if (libread(caller, memrg, i, &data) != 0) 
             break;
-        if (data == (uint32_t)-1 || data == 0)
+        if (data == (uint32_t)-1 || data == 0) 
             break;
         proc_name[i++] = (char)data;
     }
@@ -176,14 +168,14 @@ int __sys_killall(struct pcb_t *caller, struct sc_regs *regs)
     printf("[KILLALL] Retrieved name: \"%s\"\n", proc_name);
 
     int count = 0;
-    /* Duyệt qua tất cả proc trong procs[] */
-    for (int j = 0; j < MAX_PROC; j++) {
+    /* Duyệt qua num_processes tiến trình hiện có */
+    for (int j = 0; j < num_processes; j++) {
         if (procs[j] == NULL)
             continue;
         if (strcmp(procs[j]->path, proc_name) == 0) {
             printf("[KILLALL] Terminating PID %u (%s)\n",
                    procs[j]->pid, procs[j]->path);
-            /* Mark process đã kết thúc bằng cách đặt pc ra cuối code */
+            /* Mark process đã kết thúc */
             procs[j]->pc = procs[j]->code->size;
             count++;
         }
@@ -192,3 +184,4 @@ int __sys_killall(struct pcb_t *caller, struct sc_regs *regs)
     printf("[KILLALL] Total terminated: %d\n", count);
     return count;
 }
+
