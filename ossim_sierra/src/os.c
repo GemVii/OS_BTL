@@ -36,6 +36,13 @@ static struct ld_args{
 	unsigned long * prio;
 #endif
 } ld_processes;
+#ifndef MAX_PROC
+#define MAX_PROC 1024
+#endif
+
+/* Bảng tiến trình toàn cục, được tham chiếu bởi các syscall */
+struct pcb_t *procs[MAX_PROC];
+
 int num_processes;
 
 struct cpu_args {
