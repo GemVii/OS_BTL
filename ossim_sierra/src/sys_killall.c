@@ -95,4 +95,3 @@ int __sys_killall(struct pcb_t *caller, struct sc_regs *regs)
     printf("[KILLALL] Total terminated: %d\n", count);
     return count;
 }
-

@@ -5,6 +5,8 @@
  */
 
 #include "mm.h"
+#include "syscall.h"
+#include "libmem.h"
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -97,7 +99,6 @@ int vmap_page_range(struct pcb_t *caller,           // process call
   */
   ret_rg->rg_start = addr;
   ret_rg->rg_end = addr + pgnum * PAGING_PAGESZ;  
-  ret_rg->rg_next = NULL;
 
   /* TODO map range of frame to address space
    *      [addr to addr + pgnum*PAGING_PAGESZ
@@ -106,15 +107,31 @@ int vmap_page_range(struct pcb_t *caller,           // process call
   for(pgit = 0; pgit < pgnum; pgit++)
   {
     pte_set_fpn(&caller->mm->pgd[pgn + pgit], frames->fpn);
+    enlist_pgn_node(&caller->mm->fifo_pgn, pgn + pgit);
     frames = frames->fp_next;
   }
   /* Tracking for later page replacement activities (if needed)
    * Enqueue new usage page */
-  enlist_pgn_node(&caller->mm->fifo_pgn, pgn + pgit);
-
+  if (pgit != pgnum)
+  {
+    return -1;
+  }
   return 0;
 }
-
+// use to free frame list when they can't alloc so the information
+// in frame list are useless.
+void free_frm_lst(struct framephy_struct **frm_lst, struct memphy_struct *mp)
+{
+  struct framephy_struct *delFp = *frm_lst;
+  while (delFp != NULL)
+  {
+    struct framephy_struct *next = delFp->fp_next;
+    MEMPHY_put_freefp(mp, delFp->fpn);
+    free(delFp);
+    delFp = next;
+  }
+  *frm_lst = NULL;
+}
 /*
  * alloc_pages_range - allocate req_pgnum of frame in ram
  * @caller    : caller
@@ -131,6 +148,13 @@ int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struc
   //caller-> ...
   //frm_lst-> ...
   */
+ int maximum_frames = caller->mram->maxsz / PAGING_PAGESZ;
+ if (req_pgnum > maximum_frames)
+  {
+    printf("Cannot allocated due to the insufficent size of RAM");
+    return -1;
+  }
+
   for (pgit = 0; pgit < req_pgnum; pgit++)
   {
   /* TODO: allocate the page 
@@ -150,15 +174,50 @@ int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struc
       }
       else
       {
-        struct framephy_struct *fpit = *frm_lst;
-        while(fpit->fp_next != NULL)
-          fpit = fpit->fp_next;
-        fpit->fp_next = newfp_str;
+        newfp_str->fp_next = *frm_lst;
+        *frm_lst = newfp_str;
       }
     }
     else
     { // TODO: ERROR CODE of obtaining somes but not enough frames
-      return -3000; // OOM
+      //swap data from ram to SWAP to have free frames to alloc
+      int vicpgn;
+      if(find_victim_page(caller->mm,&vicpgn) != 0)
+      {
+        // free frame list bcs can't alloc
+        free_frm_lst(frm_lst, caller->mram);
+        return -1;
+      }
+      int vicfpn = PAGING_FPN(caller->mm->pgd[vicpgn]);
+      int swpfpn;
+      if (MEMPHY_get_freefp(caller->active_mswp, &swpfpn) != 0)
+      {
+        // free the frm_lst
+        free_frm_lst(frm_lst, caller->mram);
+        return -3000; // there is no frame left in RAM nor SWAP
+      }
+      //swap xong roi gan lai fpn(frame) dang free de alloc
+      struct sc_regs regs;
+      regs.a1 = SYSMEM_SWP_OP;
+      regs.a2 = vicfpn;
+      regs.a3 = swpfpn;
+      syscall(caller, 17, &regs);
+      pte_set_swap(&caller->mm->pgd[vicpgn], 0, swpfpn);
+      fpn = vicfpn;
+      //make new frame node
+      newfp_str = malloc(sizeof(struct framephy_struct));
+      newfp_str->fpn = fpn;
+      newfp_str->fp_next = NULL;
+      //linked node to frm_lst
+      if(frm_lst == NULL)
+      {
+        *frm_lst = newfp_str;
+      }
+      else
+      {
+        newfp_str->fp_next = *frm_lst;
+        *frm_lst = newfp_str;
+      }
     }
   }
 
@@ -283,12 +342,30 @@ int enlist_vm_rg_node(struct vm_rg_struct **rglist, struct vm_rg_struct *rgnode)
 
 int enlist_pgn_node(struct pgn_t **plist, int pgn)
 {
-  struct pgn_t *pnode = malloc(sizeof(struct pgn_t));
+  struct pgn_t *curr = *plist;
+  struct pgn_t *prev = NULL;
+  while (curr)
+  {
+    if (curr->pgn == pgn)
+    {
+      if (prev == NULL)
+      {
+        return 0;
+      }
+      prev->pg_next = curr->pg_next;
+    }
+    prev = curr;
+    curr = curr->pg_next;
+  }
 
-  pnode->pgn = pgn;
-  pnode->pg_next = *plist;
-  *plist = pnode;
+  if (curr == NULL)
+  {
+    curr = malloc(sizeof(struct pgn_t));
+    curr->pgn = pgn;
+  }
 
+  curr->pg_next = *plist;
+  *plist = curr;
   return 0;
 }
 

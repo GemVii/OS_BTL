@@ -163,17 +163,19 @@ int MEMPHY_dump(struct memphy_struct *mp)
   /*TODO dump memphy contnt mp->storage
    *     for tracing the memory content
    */
-  if(mp == NULL || mp->storage == NULL) {
-      printf("Error: Invalid memory or storage pointer\n");
-      return -1; // check if memory valid?
+  if (mp == NULL)
+   {
+      printf("MEMPHY is not initialized\n");
+      return -1;
    }
-   printf("__RAM CONTENT__\n");
-   for(unsigned long i = 0; i < mp->maxsz; i++){
-      if(mp->storage[i] != 0){
-         printf("0x%08lx: %08x\n", i, mp->storage[i]);
-      }
+   printf("===== PHYSICAL MEMORY DUMP =====\n");
+   for (int i = 0; i < mp->maxsz; i++)
+   {
+      if (mp->storage[i] == 0)
+         continue;
+      printf("BYTE %08x: %d\n", i, mp->storage[i]);
    }
-   printf("__END CONTENT__\n\n");
+   printf("===== PHYSICAL MEMORY END-DUMP =====\n");
    return 0;
 }
 
